@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"sync/atomic"
 
+	"github.com/TecharoHQ/anubis/internal"
 	"github.com/TecharoHQ/anubis/lib/policy/checker"
 	"github.com/TecharoHQ/anubis/lib/policy/config"
 	"github.com/TecharoHQ/anubis/lib/store"
@@ -38,6 +39,7 @@ type ParsedConfig struct {
 	StatusCodes       config.StatusCodes
 	DefaultDifficulty int
 	DNSBL             bool
+	Dns               *internal.Dns
 }
 
 func newParsedConfig(orig *config.Config) *ParsedConfig {
@@ -45,6 +47,7 @@ func newParsedConfig(orig *config.Config) *ParsedConfig {
 		orig:        orig,
 		OpenGraph:   orig.OpenGraph,
 		StatusCodes: orig.StatusCodes,
+		Dns:         internal.NewDNS(orig.DNSTTL),
 	}
 }
 
@@ -111,7 +114,7 @@ func ParseConfig(ctx context.Context, fin io.Reader, fname string, defaultDiffic
 		}
 
 		if b.Expression != nil {
-			c, err := NewCELChecker(b.Expression)
+			c, err := NewCELChecker(b.Expression, result.Dns)
 			if err != nil {
 				validationErrs = append(validationErrs, fmt.Errorf("while processing rule %s expressions: %w", b.Name, err))
 			} else {
