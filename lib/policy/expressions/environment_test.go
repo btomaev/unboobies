@@ -4,12 +4,11 @@ import (
 	"testing"
 
 	"github.com/TecharoHQ/anubis/internal"
-	"github.com/TecharoHQ/anubis/lib/policy/config"
 	"github.com/google/cel-go/common/types"
 )
 
 func TestBotEnvironment(t *testing.T) {
-	dnsObj := internal.NewDNS(config.DnsTTL{Forward: 300, Reverse: 300})
+	dnsObj := internal.NewDNS(300, 300)
 	env, err := BotEnvironment(dnsObj)
 	if err != nil {
 		t.Fatalf("failed to create bot environment: %v", err)

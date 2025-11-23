@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"sync/atomic"
+	"time"
 
 	"github.com/TecharoHQ/anubis/internal"
+	"github.com/TecharoHQ/anubis/lib/config"
 	"github.com/TecharoHQ/anubis/lib/policy/checker"
-	"github.com/TecharoHQ/anubis/lib/policy/config"
 	"github.com/TecharoHQ/anubis/lib/store"
 	"github.com/TecharoHQ/anubis/lib/thoth"
+	"github.com/fahedouch/go-logrotate"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -40,6 +43,7 @@ type ParsedConfig struct {
 	DefaultDifficulty int
 	DNSBL             bool
 	Dns               *internal.Dns
+	Logger            *slog.Logger
 }
 
 func newParsedConfig(orig *config.Config) *ParsedConfig {
@@ -47,11 +51,11 @@ func newParsedConfig(orig *config.Config) *ParsedConfig {
 		orig:        orig,
 		OpenGraph:   orig.OpenGraph,
 		StatusCodes: orig.StatusCodes,
-		Dns:         internal.NewDNS(orig.DNSTTL),
+		Dns:         internal.NewDNS(orig.DNSTTL.Forward, orig.DNSTTL.Reverse),
 	}
 }
 
-func ParseConfig(ctx context.Context, fin io.Reader, fname string, defaultDifficulty int) (*ParsedConfig, error) {
+func ParseConfig(ctx context.Context, fin io.Reader, fname string, defaultDifficulty int, logLevel string) (*ParsedConfig, error) {
 	c, err := config.Load(fin, fname)
 	if err != nil {
 		return nil, err
@@ -203,6 +207,27 @@ func ParseConfig(ctx context.Context, fin io.Reader, fname string, defaultDiffic
 		}
 	case false:
 		validationErrs = append(validationErrs, config.ErrUnknownStoreBackend)
+	}
+
+	if c.Logging.Level != nil {
+		logLevel = c.Logging.Level.String()
+	}
+
+	switch c.Logging.Sink {
+	case config.LogSinkStdio:
+		result.Logger = internal.InitSlog(logLevel, os.Stderr)
+	case config.LogSinkFile:
+		out := &logrotate.Logger{
+			Filename:           c.Logging.Parameters.Filename,
+			FilenameTimeFormat: time.RFC3339,
+			MaxBytes:           c.Logging.Parameters.MaxBytes,
+			MaxAge:             c.Logging.Parameters.MaxAge,
+			MaxBackups:         c.Logging.Parameters.MaxBackups,
+			LocalTime:          c.Logging.Parameters.UseLocalTime,
+			Compress:           c.Logging.Parameters.Compress,
+		}
+
+		result.Logger = internal.InitSlog(logLevel, out)
 	}
 
 	if len(validationErrs) > 0 {

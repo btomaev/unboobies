@@ -10,8 +10,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-
-	"github.com/TecharoHQ/anubis/lib/policy/config"
 )
 
 type DnsResult struct {
@@ -26,12 +24,12 @@ type Dns struct {
 	reverseTTL   int
 }
 
-func NewDNS(dnsTTL config.DnsTTL) *Dns {
+func NewDNS(forwardTTL int, reverseTTL int) *Dns {
 	return &Dns{
 		forwardCache: map[string]DnsResult{},
 		reverseCache: map[string]DnsResult{},
-		forwardTTL:   dnsTTL.Forward,
-		reverseTTL:   dnsTTL.Reverse,
+		forwardTTL:   forwardTTL,
+		reverseTTL:   reverseTTL,
 	}
 }
 
