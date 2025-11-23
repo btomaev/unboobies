@@ -1,0 +1,3 @@
+- import: (data)/clients/discord-preview.yaml
+- import: (data)/clients/telegram-preview.yaml
+- import: (data)/clients/vk-preview.yaml

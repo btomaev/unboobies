@@ -1,0 +1,6 @@
+- name: discordbot
+  action: ALLOW
+  expression:
+    all:
+      - userAgent.matches("Discordbot[^+]+\\+https\\://discordapp\\.com")
+      - verifyFCrDNS(remoteAddress, "^" + regexSafe(arpaReverseIP(remoteAddress)) + "\\.bc\\.googleusercontent\\.com$")
