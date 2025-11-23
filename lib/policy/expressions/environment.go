@@ -159,7 +159,7 @@ func BotEnvironment(dnsObj *internal.Dns) (*cel.Env, error) {
 						return types.ValOrErr(addr, "addr is not a string")
 					}
 
-					escapes := []string{"\\", ".", ":", "*", "?", "[", "]", "(", ")", "+", "{", "}", "|", "^", "$"}
+					escapes := []string{"\\", ".", ":", "*", "?", "-", "[", "]", "(", ")", "+", "{", "}", "|", "^", "$"}
 					r := string(s)
 
 					for _, escape := range escapes {

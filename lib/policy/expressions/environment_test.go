@@ -237,6 +237,54 @@ func TestBotEnvironment(t *testing.T) {
 			}
 		})
 	})
+
+	t.Run("regexSafe", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			expression  string
+			expected    types.Bool
+			description string
+		}{
+			{
+				name:        "complex-test",
+				expression:  `regexSafe("^(test1|test2|)[a-z]+$") == "\\^\\(test1\\|test2\\|\\)\\[a\\-z\\]\\+\\$"`,
+				expected:    types.Bool(true),
+				description: "should escape all reserved regex characters",
+			},
+			{
+				name:        "backslash-test",
+				expression:  `regexSafe("use \\\\ for special characters escaping\t, one/\"\\\"/for/cel and one/for/regex") == "use \\\\\\\\ for special characters escaping\t, one/\"\\\\\"/for/cel and one/for/regex"`,
+				expected:    types.Bool(true),
+				description: "should escape double-backslashes as double-double-backslashes and ignore cel escaping and forward slashes",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				prog, err := Compile(env, tt.expression)
+				if err != nil {
+					t.Fatalf("failed to compile expression %q: %v", tt.expression, err)
+				}
+
+				result, _, err := prog.Eval(map[string]interface{}{})
+				if err != nil {
+					t.Fatalf("failed to evaluate expression %q: %v", tt.expression, err)
+				}
+
+				if result != tt.expected {
+					t.Errorf("%s: expected %v, got %v", tt.description, tt.expected, result)
+				}
+			})
+		}
+
+		t.Run("function-compilation", func(t *testing.T) {
+			src := `regexSafe(".*")`
+			_, err := Compile(env, src)
+			if err != nil {
+				t.Fatalf("failed to compile regexSafe expression: %v", err)
+			}
+		})
+	})
 }
 
 func TestThresholdEnvironment(t *testing.T) {

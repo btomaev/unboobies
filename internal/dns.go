@@ -12,6 +12,11 @@ import (
 	"time"
 )
 
+var (
+	DNSLookupAddr = net.LookupAddr
+	DNSLookupHost = net.LookupHost
+)
+
 type DnsResult struct {
 	entries    []string
 	expiration time.Time
@@ -69,7 +74,7 @@ func (d *Dns) reverseCahcePut(addr string, entries []string) {
 
 // lookupAddrAndTrim performs a reverse DNS lookup and trims the trailing dot from the results.
 func (d *Dns) lookupAddrAndTrim(addr string) ([]string, error) {
-	names, err := net.LookupAddr(addr)
+	names, err := DNSLookupAddr(addr)
 	if err != nil {
 		if dnsErr, ok := err.(*net.DNSError); ok && dnsErr.IsNotFound {
 			slog.Debug("lookupAddrAndTrim: no PTR record found", "addr", addr)
@@ -99,8 +104,12 @@ func (d *Dns) verifyFCrDNSInternal(addr string, names []string) bool {
 		}
 
 		slog.Debug("verifyFCrDNS: forward lookup cache miss", "name", name)
-		ips, err := net.LookupHost(name)
+		ips, err := DNSLookupHost(name)
 		if err != nil {
+			if dnsErr, ok := err.(*net.DNSError); ok && dnsErr.IsNotFound {
+				slog.Debug("verifyFCrDNS: no A/AAAA record found", "name", name)
+				continue
+			}
 			slog.Error("verifyFCrDNS: forward lookup failed", "name", name, "err", err)
 			continue
 		}
@@ -144,8 +153,12 @@ func (d *Dns) LookupHost(host string) ([]string, error) {
 	}
 
 	slog.Debug("performing lookupHost", "host", host)
-	addrs, err := net.LookupHost(host)
+	addrs, err := DNSLookupHost(host)
 	if err != nil {
+		if dnsErr, ok := err.(*net.DNSError); ok && dnsErr.IsNotFound {
+			slog.Debug("lookupHost: no A/AAAA record found", "host", host)
+			return []string{}, nil
+		}
 		slog.Error("lookupHost failed", "host", host, "err", err)
 		return []string{}, err
 	}
