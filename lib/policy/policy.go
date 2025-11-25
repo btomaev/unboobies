@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/TecharoHQ/anubis/internal"
+	"github.com/TecharoHQ/anubis/internal/dns"
 	"github.com/TecharoHQ/anubis/lib/config"
 	"github.com/TecharoHQ/anubis/lib/policy/checker"
 	"github.com/TecharoHQ/anubis/lib/store"
@@ -42,6 +43,7 @@ type ParsedConfig struct {
 	StatusCodes       config.StatusCodes
 	DefaultDifficulty int
 	DNSBL             bool
+	Dns               *dns.Dns
 	Logger            *slog.Logger
 }
 
@@ -116,7 +118,7 @@ func ParseConfig(ctx context.Context, fin io.Reader, fname string, defaultDiffic
 		}
 
 		if b.Expression != nil {
-			c, err := NewCELChecker(b.Expression)
+			c, err := NewCELChecker(b.Expression, result.Dns)
 			if err != nil {
 				validationErrs = append(validationErrs, fmt.Errorf("while processing rule %s expressions: %w", b.Name, err))
 			} else {
@@ -206,6 +208,9 @@ func ParseConfig(ctx context.Context, fin io.Reader, fname string, defaultDiffic
 	case false:
 		validationErrs = append(validationErrs, config.ErrUnknownStoreBackend)
 	}
+
+	dnsCache := dns.NewDNSCache(result.orig.DNSTTL.Forward, result.orig.DNSTTL.Reverse, result.Store)
+	result.Dns = dns.New(ctx, dnsCache)
 
 	if c.Logging.Level != nil {
 		logLevel = c.Logging.Level.String()
